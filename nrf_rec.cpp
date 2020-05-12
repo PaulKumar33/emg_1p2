@@ -9,7 +9,7 @@ struct package
 
 struct instruction{
   char instr;
-  float collectionTime = 10;
+  float collectionTime = null;
 };
 
 //byte addresses[] = {0xF0, 0xE0}; 
@@ -19,6 +19,13 @@ typedef struct package Package;
 typedef struct instruction Instruction;
 Package data;
 Instruction inst;
+
+/*
+ * set up flag globals
+ */
+
+bool ACK_RECEIVED;
+bool TIME_RECEIVED;
 
 void setup() 
 {
@@ -33,6 +40,10 @@ void setup()
   myRadio.openWritingPipe(addresses[1]);
   myRadio.startListening();
   Serial.println("Starting up....");
+
+  //initialize flags
+  ACK_RECEIVED = false;
+  TIME_RECEIVED = false;
 }
 
 
@@ -61,6 +72,40 @@ void loop()
         Serial.println(inst.instr);
         myRadio.write(&inst, sizeof(inst));
         Serial.println("Sent the acknowledge");
+
+        //now wait for the collection time
+        myRadio.startListening();
+        int waitTime = 5; //wait time for collection time
+        unsigned long startWait = millis();
+        
+        myRadio.read(&inst, sizeof(inst));
+        while(millis() - waitTime < waitTIme*1000){
+          //hold and then send timeout signal
+          TIME_RECEIVED = false;
+          if(inst.collectionTime != null){
+            TIME_RECEIEVED = true;
+            break;
+          }
+          myRadio.read(&inst, sizeof(inst));          
+        }
+
+        //deal with response
+        if(!TIME_RECEIVED){
+          Serial.println("Defaulting to standard time period of 10s");
+          inst.collectionTime = 10;
+        }
+
+        //else condition not needed. inst.collectionPeriod should be set
+
+        //begin the collection period
+        unsigned long collectionStart = millis()
+        /*
+         * configure the ADC here
+         */
+
+         while(millis() - collectionStart < inst.collectionTime){
+          //do collections
+         }
       }
       /*myRadio.read( &inst, sizeof(inst) );
       if(inst == 'b'){
