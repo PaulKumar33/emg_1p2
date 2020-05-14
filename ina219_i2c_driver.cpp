@@ -1,6 +1,6 @@
 
 #include "Wire.h"
-byte i2c_address = 0x40;
+uint8_t i2c_address = 0x40;
 
 void setup() {
   // put your setup code here, to run once:
@@ -22,7 +22,27 @@ void loop() {
     //send byte, see if we recieve an ack
     if(Wire.endTransmission()==0){
       Serial.println("POR");
+      //now read back the register contents
+      Wire.requestFrom(i2c_address, 2);
+      byte a = Wire.read();
+      byte b = Wire.read();
+
+      uint16_t read_words = ((a << 8) | b);
+      Serial.println(read_words, HEX);
+      if(read_words - 0x399F == 0){
+        Serial.println("POR Success");
+      }
+      else{
+        Serial.print("Config reg read back ");
+        Serial.print(read_words, HEX);
+        Serial.print(" When 0x399F expected");
+        return;
+        } 
     }
+    else{
+      Serial.println("Could not send POR....");
+      return;
+      }
     delay(1000);
   }
   
