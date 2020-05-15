@@ -1,33 +1,46 @@
-import serial
+import numpy as np 
 import time
+import serial
+import struct
 import matplotlib.pyplot as plt
-import numpy as np
 
-COM = "COM3"
-ser = serial.Serial(COM, 1000000)
+com = "COM3"
+baud = 115200
 
+ser = serial.Serial(com, baud,
+    parity = serial.PARITY_NONE,
+    stopbits = serial.STOPBITS_ONE,
+    bytesize = serial.EIGHTBITS,
+    timeout=0.1,
+    inter_byte_timeout=0.1
+    )
+
+res = bytearray(4)
+#ser.readinto(res)
+
+
+rxbuffer =b''
 ser.flushInput()
-
-measurement_period = 5
-print("recording from serial port {0} for {1}".format(COM, measurement_period))
-
+time.sleep(2)
 tik = time.time()
-decoded_bytes = []
-while(time.time() - tik < measurement_period):
-	 #ser_bytes = ser.readline()
-	try:
-		byte= float(ser.readline().decode('utf-8').rstrip())
-		decoded_bytes.append(byte)
-	except ValueError:
-		print("Was not float")
+rec = []
+while(time.time() - tik < 1):
+    rxbuffer = ser.read(2)
+    conv = int.from_bytes(rxbuffer, 'big', signed=True)
+    rec.append(conv)
+    #print(conv)
+    
+    
+    ##rec.append(value2)
+    #print(float(value)/13107)
 
-print("Final length after {0}s: {1}".format(measurement_period, len(decoded_bytes)))
-x = np.linspace(0,10,len(decoded_bytes))
-plt.plot(x, decoded_bytes)
+    #print(res)
+#print(int.from_bytes(rxbuffer, 'big', signed=True))
+#print(len(rxbuffer))
+#print(rxbuffer)
+print(len(rec))
+ser.close()
 
-plt.title("Test Signal: Sine 1kHz, baud: 1MHz, Prescaler 128")
+x = np.linspace(0,1,len(rec))
+plt.plot(x, rec)
 plt.show()
-
-
-
-
