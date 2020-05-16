@@ -4,7 +4,7 @@ import serial
 import struct
 import matplotlib.pyplot as plt
 
-com = "COM3"
+com = "COM15"
 baud = 115200
 
 ser = serial.Serial(com, baud,
@@ -12,7 +12,8 @@ ser = serial.Serial(com, baud,
     stopbits = serial.STOPBITS_ONE,
     bytesize = serial.EIGHTBITS,
     timeout=0.1,
-    inter_byte_timeout=0.1
+    inter_byte_timeout=0.1,
+    rtscts = True
     )
 
 res = bytearray(4)
@@ -21,23 +22,23 @@ res = bytearray(4)
 
 rxbuffer =b''
 ser.flushInput()
+ser.flushOutput()
 time.sleep(2)
 tik = time.time()
 rec = []
 while(time.time() - tik < 1):
     rxbuffer = ser.read(2)
-    conv = int.from_bytes(rxbuffer, 'big', signed=True)
-    rec.append(conv)
-    #print(conv)
+    if(int.from_bytes(rxbuffer, 'big', signed=True) > 1023):
+        print("out of sync")
+        ser.flushInput()
+        ser.flushOutput()
+        time.sleep(0.1)
+        ser.read(1)
+        tik = time.time()
+        continue    
+    #conv = int.from_bytes(rxbuffer, 'big', signed=True)
+    rec.append(int.from_bytes(rxbuffer, 'big', signed=True))
     
-    
-    ##rec.append(value2)
-    #print(float(value)/13107)
-
-    #print(res)
-#print(int.from_bytes(rxbuffer, 'big', signed=True))
-#print(len(rxbuffer))
-#print(rxbuffer)
 print(len(rec))
 ser.close()
 
