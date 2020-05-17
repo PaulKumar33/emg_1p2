@@ -52,13 +52,13 @@ class serialInterfaceArduino:
 
 
     def __init__(self, com_address, baud, timeout_inter_byte = 0.1, timeout = 0.1):
-        self.ser = serial.Serial(com_address, baud)
-        '''parity=serial.PARITY_NONE,
+        self.ser = serial.Serial(com_address, baud,
+        parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS)'''
-        '''timeout=timeout,
-        inter_byte_timeout=timeout_inter_byte,
-        rtscts=True)'''
+        bytesize=serial.EIGHTBITS,
+        timeout=timeout,
+        inter_byte_timeout=timeout_inter_byte)
+        '''rtscts=True)'''
 
         print("initializing objects")
         self.recieved_bytes = []
@@ -89,7 +89,7 @@ class serialInterfaceArduino:
     def writeArduino(self):
         self.ser.write(b's')
         print("Command sent")
-        print(self.ser.readline())
+        print(self.ser.readline().decode('utf-8'))
 
     def readArduino(self):
         pass

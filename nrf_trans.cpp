@@ -23,6 +23,12 @@ typedef struct instruction Instruction;
 Package data;
 Instruction inst;
 
+//variables for reading fromPC
+bool readInProgress;
+bool newData;
+const char buffSize;
+char inputBuffer[buffSize];
+
 
 void setup()
 {
@@ -94,4 +100,34 @@ void loop()
   myRadio.write(&data.val, sizeof(data.val)); 
   Serial.println(data.val); 
   //delay(10000);*/
+}
+
+
+void GetDataFromPC(){
+  //recieve data from pc. This is for commands to start stop collection
+
+  if(Serial.available() > 0){
+    char x = Serial.read();
+
+    if (x == endMarker) {
+      readInProgress = false;
+      newDataFromPC = true;
+      inputBuffer[bytesRecvd] = 0;
+      parseData();
+    }
+    
+    if(readInProgress) {
+      inputBuffer[bytesRecvd] = x;
+      bytesRecvd ++;
+      if (bytesRecvd == buffSize) {
+        bytesRecvd = buffSize - 1;
+      }
+    }
+
+    if (x == startMarker) { 
+      bytesRecvd = 0; 
+      readInProgress = true;
+    }
+
+  }
 }
