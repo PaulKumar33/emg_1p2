@@ -4,7 +4,7 @@ import serial
 import struct
 import matplotlib.pyplot as plt
 
-com = "COM15"
+'''com = "COM15"
 baud = 115200
 
 ser = serial.Serial(com, baud,
@@ -44,4 +44,61 @@ ser.close()
 
 x = np.linspace(0,1,len(rec))
 plt.plot(x, rec)
-plt.show()
+plt.show()'''
+
+
+
+class serialInterfaceArduino:
+
+
+    def __init__(self, com_address, baud, timeout_inter_byte = 0.1, timeout = 0.1):
+        self.ser = serial.Serial(com_address, baud)
+        '''parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS)'''
+        '''timeout=timeout,
+        inter_byte_timeout=timeout_inter_byte,
+        rtscts=True)'''
+
+        print("initializing objects")
+        self.recieved_bytes = []
+        self.recieved_packet = b''
+
+        self.__init__device()
+
+
+        self.commands = {
+        'start':'s',
+        'ack':'a',
+        'end':'e',
+        'kill':'k'
+    }
+
+
+    def __init__device(self):
+        self.ser.flushInput()
+        self.ser.flushOutput()
+        time.sleep(4)
+
+    def sendCommand(self, command = 'start'):
+        try:
+            self.ser.write(b'{}'.format(commands[command]))
+        except KeyError:
+            print(f"{command} not a valid command")
+
+    def writeArduino(self):
+        self.ser.write(b's')
+        print("Command sent")
+        print(self.ser.readline())
+
+    def readArduino(self):
+        pass
+
+
+if __name__=="__main__":
+    ser = serialInterfaceArduino("COM15", 9600)
+    ser.writeArduino()
+    ser.readArduino()
+
+
+
