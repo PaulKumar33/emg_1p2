@@ -89,7 +89,7 @@ class serialInterfaceArduino:
             if(command in self.commands):
                 command = "<command,{}>".format(self.commands[command])
             elif(command == "params"):
-                command = "<command, p>"
+                command = "<command,p>"
                 for param in params.keys():
                     el = "<param,{0},{1}>".format(param, params[param])
                     list_params.append(el)

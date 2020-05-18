@@ -39,12 +39,11 @@ const char startMarker = '<';
 const char endMarker = '>';
 
 //flow control
-bool idle = true;
-bool COLLECTION = false;
-bool ACK_RECIEVED = false;
-bool PARAM_SET = false;
-bool PARAM_RECIEVED = false;
-
+bool idle = true;                       //idle waiting for master device to interact
+bool COLLECTION = false;                //device wants to collect data
+bool ACK_RECIEVED = false;              //
+bool PARAM_SET = false;                 //Ready to set the collection params
+bool PARAM_RECIEVED = false;            //Params have been set
 
 
 void setup()
@@ -72,20 +71,26 @@ void loop()
 
       //now need to recieve a setup configuration from the master machine
       Serial.println("ack");
-      int waitTime = 2;
+      int waitTime = 20;
       unsigned long waitStart = millis();
       while(true){
-        if(millis() - waitStart > waitTime){
+        if(millis() - waitStart > waitTime*1000){
             Serial.println("Timeout");
             return;
         }
-        else if(Serial.available > 0){
+        else if(Serial.available() > 0){
           //something waiting in recieved buffer
           GetDataFromPC();
-          if(PARAM_SET == true){
+          if(PARAM_SET == true){ 
             //master wwants to set the params. send ack to acknowledge
             Serial.println("ack");
+            waitStart = millis();
             GetDataFromPC();
+            if(PARAM_RECIEIVED == true){
+              PARAM_RECIEIVED = false;
+              PARAM_SET = false;
+              break
+            }
           }
         }
       }
@@ -198,6 +203,9 @@ void parseData() {
         token = strtok(NULL, ",");
         rfConfig.collectionTime = atoi(token);
         PARAM_RECIEVED = true;
+        //debug
+        Serial.println("Collection time set");
+        Serial.println(rfConfig.collectionTime);
       }
     }
     else{
