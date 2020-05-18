@@ -88,7 +88,7 @@ class serialInterfaceArduino:
             #format command
             if(command in self.commands):
                 command = "<command,{}>".format(self.commands[command])
-            elif(command == "parms"):
+            elif(command == "params"):
                 command = "<command, p>"
                 for param in params.keys():
                     el = "<param,{0},{1}>".format(param, params[param])
@@ -98,6 +98,10 @@ class serialInterfaceArduino:
 
         #send payload
         self.writeArduino(command, len(command))
+        if(command == "params"):
+            pass
+
+
 
     def writeArduino(self, char, len_char):
         index = 0
@@ -105,7 +109,7 @@ class serialInterfaceArduino:
             try:
                 if(self.ser.write(char[index].encode()) == 1):
                     index += 1
-                    print(self.ser.readline().decode("utf-8"))
+                    #print(self.ser.readline().decode("utf-8"))
                 else:
                     raise Exception("Data could not be sent on {}".format(self.com))
                     break

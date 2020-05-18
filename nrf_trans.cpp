@@ -41,7 +41,9 @@ const char endMarker = '>';
 //flow control
 bool idle = true;
 bool COLLECTION = false;
-bool ACK_RECIEVED = false
+bool ACK_RECIEVED = false;
+bool PARAM_SET = false;
+bool PARAM_RECIEVED = false;
 
 
 
@@ -80,70 +82,38 @@ void loop()
         else if(Serial.available > 0){
           //something waiting in recieved buffer
           GetDataFromPC();
+          if(PARAM_SET == true){
+            //master wwants to set the params. send ack to acknowledge
+            Serial.println("ack");
+            GetDataFromPC();
+          }
         }
       }
+      //communicate with the receiver
       inst.instr = 'b';
       myRadio.write(&inst, sizeof(inst));
       myRadio.startListening();
 
-
-    }
-
-  }
-  if(Serial.available()>0){
-    if(Serial.read() == 'b'){
-      Serial.println("beginning Data Collection...");
-
-      //want to send an instr
-      inst.instr = 'b';
-      myRadio.write(&inst, sizeof(inst));
-      myRadio.startListening();
-      Serial.println("listening...");
-
-      unsigned long waitTime = millis();
-      int timePeriod = 5;
-      
-
-      //works as interrupt like flow -> chekc for ack
       myRadio.read(&inst, sizeof(inst));
-      Serial.println(inst.instr);
+      waitStart = millis();
       while(inst.instr != 'a'){
-        if(millis() - waitTime > timePeriod*1000){
-          break;
+        if(millis() - waitStart > waitTime*1000){
+          Serial.println("no receiver ack");
+          return;
         }      
       }
+
       if(inst.instr == 'a'){
         Serial.println("Recieved ack");
         myRadio.stopListening();
-
+        //get collection time period from master
         //sending the collection time period.
-        inst.collectionTime = 10;
-        myRadio.write(&inst, sizeof(inst)); 
+        if(PARAM_RECIEVED){
+          myRadio.write(&rfConfig, sizeof(rfConfig)); 
+        }
       }
-
-      //now prepare to send the time period
-      /*
-       * need to rework this. eventually want to recieve a python struct with the time and
-       * other collection params
-       * 
-       * for now it is defaulted to 10
-       */
-       
-       inst.collectionTime = 10;
-       myRadio.write(&inst, sizeof(inst));
-       
     }
-    if(Serial.read() == 'k'){
-      Serial.println("Kill command sent");
-    }
-    //data.val = analogRead(0);  
-    //myRadio.write(&data.val, sizeof(data.val)); 
-    //Serial.println(data.val);  
   }
-  /*data.val = analogRead(0);  
-  myRadio.write(&data.val, sizeof(data.val)); 
-  Serial.println(data.val); 
-  //delay(10000);*/
 }
 
 /*
@@ -184,7 +154,6 @@ void GetDataFromPC(){
       bytesRecvd = 0; 
       readInProgress = true;
     }
-
   }
 }
 void parseData() {
@@ -209,9 +178,14 @@ void parseData() {
         //recieved an ack
         
       }
-      else if(strcmp(&token[0], "e") == 0){
-        //end the data collection
+      else if(strcmp(&token[0], "pe") == 0){
+        //end the params collection
+        PARAM_SET = false;
         
+      }
+      else if(strcmp(&token[0], "p") == 0){
+        //set the params
+        PARAM_SET = true;
       }
       else{
         //recieved a bogus command
@@ -221,7 +195,9 @@ void parseData() {
     else if(strcmp(&token[0], "param") == 0){
       token = strtok(NULL, ",");
       if(strcmp(&token[0], "time") == 0){
-
+        token = strtok(NULL, ",");
+        rfConfig.collectionTime = atoi(token);
+        PARAM_RECIEVED = true;
       }
     }
     else{
