@@ -14,20 +14,35 @@ struct package
 struct instruction{
   char instr;
   char* ack;
-  float collectionTime = 10;
 };
 
+struct config{
+  int collectionTime = 10;
 
+};
+
+//initialize structures
 typedef struct package Package;
 typedef struct instruction Instruction;
+typedef struct config Config;
+Config rfConfig;
 Package data;
 Instruction inst;
 
 //variables for reading fromPC
-bool readInProgress;
-bool newData;
-const char buffSize;
+boolean readInProgress = false;
+boolean newDataFromPC = false;
+const char buffSize =40;
 char inputBuffer[buffSize];
+byte bytesRecvd = 0;
+const char startMarker = '<';
+const char endMarker = '>';
+
+//flow control
+bool idle = true;
+bool COLLECTION = false;
+bool ACK_RECIEVED = false
+
 
 
 void setup()
@@ -46,6 +61,35 @@ void setup()
 
 void loop()
 {
+  //set idle condition -  when its waiting for a command
+  while(idle){
+    GetDataFromPC();
+    if(COLLECTION == true){
+      //start collection
+      //send an instruction
+
+      //now need to recieve a setup configuration from the master machine
+      Serial.println("ack");
+      int waitTime = 2;
+      unsigned long waitStart = millis();
+      while(true){
+        if(millis() - waitStart > waitTime){
+            Serial.println("Timeout");
+            return;
+        }
+        else if(Serial.available > 0){
+          //something waiting in recieved buffer
+          GetDataFromPC();
+        }
+      }
+      inst.instr = 'b';
+      myRadio.write(&inst, sizeof(inst));
+      myRadio.startListening();
+
+
+    }
+
+  }
   if(Serial.available()>0){
     if(Serial.read() == 'b'){
       Serial.println("beginning Data Collection...");
@@ -102,7 +146,9 @@ void loop()
   //delay(10000);*/
 }
 
-
+/*
+* Methods for receiving and processing data from pc
+*/
 void GetDataFromPC(){
   //recieve data from pc. This is for commands to start stop collection
 
@@ -110,13 +156,20 @@ void GetDataFromPC(){
     char x = Serial.read();
 
     if (x == endMarker) {
+      //for debug
+      Serial.println(x);
+      //
       readInProgress = false;
       newDataFromPC = true;
       inputBuffer[bytesRecvd] = 0;
+      Serial.println("Parsing");
       parseData();
     }
     
     if(readInProgress) {
+      //for debug
+      Serial.println(x);
+      //
       inputBuffer[bytesRecvd] = x;
       bytesRecvd ++;
       if (bytesRecvd == buffSize) {
@@ -125,9 +178,54 @@ void GetDataFromPC(){
     }
 
     if (x == startMarker) { 
+      //for debug
+      Serial.println(x);
+      //
       bytesRecvd = 0; 
       readInProgress = true;
     }
 
+  }
+}
+void parseData() {
+
+    // split the data into its parts
+    
+  char * token; // this is used by strtok() as an index
+  
+  token = strtok(inputBuffer,",");      // get the first part - the string
+  //strcpy(messageFromPC, strtokIndx); // copy it to messageFromPC
+
+  while(token != NULL){
+    //Serial.println(token[0]);
+    if(strcmp(&token[0], "command") == 0){
+      //flow for recieving a command
+      token = strtok(NULL, ",");
+      if(strcmp(&token[0], "s") == 0){
+        //start the data collection
+        COLLECTION = true;        
+      }
+      else if(strcmp(&token[0], "a") == 0){
+        //recieved an ack
+        
+      }
+      else if(strcmp(&token[0], "e") == 0){
+        //end the data collection
+        
+      }
+      else{
+        //recieved a bogus command
+        
+      }
+    }
+    else if(strcmp(&token[0], "param") == 0){
+      token = strtok(NULL, ",");
+      if(strcmp(&token[0], "time") == 0){
+
+      }
+    }
+    else{
+      break;
+      }
   }
 }

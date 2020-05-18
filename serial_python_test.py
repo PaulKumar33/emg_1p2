@@ -72,7 +72,9 @@ class serialInterfaceArduino:
         'ack':'a',
         'end':'e',
         'kill':'k'
-    }
+        }
+        self.com = com_address
+        self.baud = baud
 
 
     def __init__device(self):
@@ -80,16 +82,37 @@ class serialInterfaceArduino:
         self.ser.flushOutput()
         time.sleep(4)
 
-    def sendCommand(self, command = 'start'):
+    def sendCommand(self, command = 'start', params={}):
+        list_params = []
         try:
-            self.ser.write(b'{}'.format(commands[command]))
+            #format command
+            if(command in self.commands):
+                command = "<command,{}>".format(self.commands[command])
+            elif(command == "parms"):
+                command = "<command, p>"
+                for param in params.keys():
+                    el = "<param,{0},{1}>".format(param, params[param])
+                    list_params.append(el)
         except KeyError:
             print(f"{command} not a valid command")
 
-    def writeArduino(self):
-        self.ser.write(b's')
-        print("Command sent")
-        print(self.ser.readline().decode('utf-8'))
+        #send payload
+        self.writeArduino(command, len(command))
+
+    def writeArduino(self, char, len_char):
+        index = 0
+        while(index < len_char):
+            try:
+                if(self.ser.write(char[index].encode()) == 1):
+                    index += 1
+                    print(self.ser.readline().decode("utf-8"))
+                else:
+                    raise Exception("Data could not be sent on {}".format(self.com))
+                    break
+            except IndexError:
+                print("Index of desired data exceeded")
+            except Exception as e:
+                print(e)
 
     def readArduino(self):
         pass
@@ -97,8 +120,9 @@ class serialInterfaceArduino:
 
 if __name__=="__main__":
     ser = serialInterfaceArduino("COM15", 9600)
-    ser.writeArduino()
-    ser.readArduino()
+    ser.sendCommand("start")
+    #ser.writeArduino()
+    #ser.readArduino()
 
 
 
