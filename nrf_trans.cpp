@@ -4,6 +4,8 @@
 RF24 myRadio (7, 8);
 //byte addresses[] = {0xF0, 0xE0};
 byte addresses[][6] = {"F", "E"};
+
+
 struct package
 {
   //int id=1;
@@ -16,15 +18,14 @@ struct instruction{
   char* ack;
 };
 
-struct config{
+struct rfconfig{
   int collectionTime = 10;
-
 };
 
 //initialize structures
 typedef struct package Package;
 typedef struct instruction Instruction;
-typedef struct config Config;
+typedef struct rfconfig Config;
 Config rfConfig;
 Package data;
 Instruction inst;
@@ -38,12 +39,16 @@ byte bytesRecvd = 0;
 const char startMarker = '<';
 const char endMarker = '>';
 
+//transceiver objects
+int received_data;
+
 //flow control
 bool idle = true;                       //idle waiting for master device to interact
 bool COLLECTION = false;                //device wants to collect data
 bool ACK_RECIEVED = false;              //
 bool PARAM_SET = false;                 //Ready to set the collection params
-bool PARAM_RECIEVED = false;            //Params have been set
+bool PARAM_RECEIVED = false;            //Params have been set
+bool sent = false;                      //data sent?
 
 
 void setup()
@@ -55,13 +60,19 @@ void setup()
   myRadio.setChannel(115); 
   myRadio.setPALevel(RF24_PA_MAX);
   myRadio.setDataRate( RF24_2MBPS ) ; 
+
+  myRadio.enableAckPayload();
+  myRadio.setRetries(5,5);
+  
   myRadio.openWritingPipe( addresses[0]);
   myRadio.openReadingPipe(1, addresses[1]);
+  
   delay(1000);
 }
 
 void loop()
 {
+  int waitTime = 20;
   //set idle condition -  when its waiting for a command
   while(idle){
     GetDataFromPC();
@@ -71,7 +82,7 @@ void loop()
 
       //now need to recieve a setup configuration from the master machine
       Serial.println("ack");
-      int waitTime = 20;
+      
       unsigned long waitStart = millis();
       while(true){
         if(millis() - waitStart > waitTime*1000){
@@ -86,40 +97,39 @@ void loop()
             Serial.println("ack");
             waitStart = millis();
             GetDataFromPC();
-            if(PARAM_RECIEIVED == true){
-              PARAM_RECIEIVED = false;
+            if(PARAM_RECEIVED == true){
+              //PARAM_RECEIVED = false;
               PARAM_SET = false;
-              break
+              idle = false;
+              break;
             }
           }
         }
       }
-      //communicate with the receiver
-      inst.instr = 'b';
-      myRadio.write(&inst, sizeof(inst));
-      myRadio.startListening();
-
-      myRadio.read(&inst, sizeof(inst));
-      waitStart = millis();
-      while(inst.instr != 'a'){
-        if(millis() - waitStart > waitTime*1000){
-          Serial.println("no receiver ack");
-          return;
-        }      
-      }
-
-      if(inst.instr == 'a'){
-        Serial.println("Recieved ack");
-        myRadio.stopListening();
-        //get collection time period from master
-        //sending the collection time period.
-        if(PARAM_RECIEVED){
-          myRadio.write(&rfConfig, sizeof(rfConfig)); 
-        }
+     }
+    }
+    //Serial.println("Communicating with receiver");
+    //communication with transceiver - set as transmitter
+    Serial.println("debug 1");
+    inst.instr = 'b';
+    sent = myRadio.write(&inst, sizeof(inst));
+    if(sent){
+      if(myRadio.isAckPayloadAvailable()){
+        Serial.println("Recieved Ack");
       }
     }
-  }
+    myRadio.startListening();
+    delay(200);    
+    Serial.println("Should be receiving");
+
+    
+    /*while(true){
+      myRadio.read(&data, sizeof(data));
+      received_data = data.val;
+      Serial.println(data.val);
+    }*/   
 }
+
 
 /*
 * Methods for receiving and processing data from pc
@@ -202,7 +212,7 @@ void parseData() {
       if(strcmp(&token[0], "time") == 0){
         token = strtok(NULL, ",");
         rfConfig.collectionTime = atoi(token);
-        PARAM_RECIEVED = true;
+        PARAM_RECEIVED = true;
         //debug
         Serial.println("Collection time set");
         Serial.println(rfConfig.collectionTime);

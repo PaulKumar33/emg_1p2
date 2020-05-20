@@ -4,12 +4,18 @@
 RF24 myRadio (7, 8); 
 struct package
 {
-  int val = 0.0;
+  //int id=1;
+  int val = 0;
+  //char  text[100] = "Text to be transmitted";
 };
 
 struct instruction{
   char instr;
-  float collectionTime = null;
+  char* ack;
+};
+
+struct rfconfig{
+  int collectionTime = 10;
 };
 
 //byte addresses[] = {0xF0, 0xE0}; 
@@ -17,6 +23,8 @@ byte addresses[][6] = {"F", "E"};
 
 typedef struct package Package;
 typedef struct instruction Instruction;
+typedef struct rfconfig Config;
+Config rfConfig;
 Package data;
 Instruction inst;
 
@@ -27,20 +35,24 @@ Instruction inst;
 bool ACK_RECEIVED;
 bool TIME_RECEIVED;
 
+int ackData[2] = {1,1};
+
 void setup() 
 {
   Serial.begin(115200);
-  delay(1000);
+  //delay(1000);
 
   myRadio.begin(); 
   myRadio.setChannel(115); 
   myRadio.setPALevel(RF24_PA_MAX);
   myRadio.setDataRate( RF24_2MBPS ) ; 
+  myRadio.enableAckPayload();
   myRadio.openReadingPipe(1, addresses[0]);
   myRadio.openWritingPipe(addresses[1]);
   myRadio.startListening();
-  Serial.println("Starting up....");
+  //Serial.println("Starting up....");
 
+  myRadio.writeAckPayload(1, &ackData, sizeof(ackData));
   //initialize flags
   ACK_RECEIVED = false;
   TIME_RECEIVED = false;
@@ -61,70 +73,40 @@ void loop()
     {
       myRadio.read(&inst, sizeof(inst));
       if(inst.instr == 'b'){
-        Serial.println("received a begin adc command");
+        myRadio.writeAckPayload(1, &ackData, sizeof(ackData));
 
         //send the ack back
         myRadio.stopListening();
 
-        //delay to let the reciever start listening
+        /*//delay to let the reciever start listening
         delay(100);
         inst.instr = 'a';
-        Serial.println(inst.instr);
         myRadio.write(&inst, sizeof(inst));
-        Serial.println("Sent the acknowledge");
 
         //now wait for the collection time
         myRadio.startListening();
-        int waitTime = 5; //wait time for collection time
-        unsigned long startWait = millis();
-        
-        myRadio.read(&inst, sizeof(inst));
-        while(millis() - waitTime < waitTIme*1000){
-          //hold and then send timeout signal
-          TIME_RECEIVED = false;
-          if(inst.collectionTime != null){
-            TIME_RECEIEVED = true;
-            break;
-          }
-          myRadio.read(&inst, sizeof(inst));          
+        int waitTime = 5;
+        delay(100);        
+        myRadio.read(&rfConfig, sizeof(rfConfig));
+        if(rfConfig.collectionTime != NULL){
+          TIME_RECEIVED = true;
         }
 
         //deal with response
         if(!TIME_RECEIVED){
-          Serial.println("Defaulting to standard time period of 10s");
-          inst.collectionTime = 10;
+          //Serial.println("Defaulting to standard time period of 10s");
+          rfConfig.collectionTime = 10;
         }
 
-        //else condition not needed. inst.collectionPeriod should be set
-
-        //begin the collection period
-        unsigned long collectionStart = millis()
-        /*
-         * configure the ADC here
-         */
-
-         while(millis() - collectionStart < inst.collectionTime){
+        //begin the collection period*/
+        myRadio.stopListening();
+        unsigned long collectionStart = millis();
+      
+         while(millis() - collectionStart < 10000){
           //do collections
+          data.val = analogRead(0);
+          myRadio.write(&data, sizeof(data));          
          }
       }
-      /*myRadio.read( &inst, sizeof(inst) );
-      if(inst == 'b'){
-        //send out the ack back to the master
-        myRadio.stopListening();
-        char message[] = "ack";
-        myRadio.write(&message, sizeof(message));
-
-        //ack sent, now wait for recording period time
-        myRadio.startListening();
-        int timewait = 10;
-        unsigned long StartWaitTime = millis();
-        while(millis() - StartWaitTime < timewait*1000){
-                          
-        }
-      }
-    }
-    Serial.println(data.val);*/
-    //myRadio.read( &data, sizeof(data) );
-    //Serial.println(data.val);
-    }
+   }
 }
