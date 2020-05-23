@@ -4,30 +4,50 @@ import serial
 import struct
 import matplotlib.pyplot as plt
 
-'''com = "COM15"
-baud = 115200
+com = "COM16"
+baud = 1000000
+collect = False
+complete = False
+rxbuffer = ''
 
 ser = serial.Serial(com, baud,
     parity = serial.PARITY_NONE,
     stopbits = serial.STOPBITS_ONE,
     bytesize = serial.EIGHTBITS,
     timeout=0.1,
-    inter_byte_timeout=0.1,
-    rtscts = True
-    )
+    inter_byte_timeout=0.1)
+    #rtscts = True
+    #)
+'''def waitForArduino():
 
-res = bytearray(4)
-#ser.readinto(res)
+    # wait until the Arduino sends 'Arduino is ready' - allows time for Arduino reset
+    # it also ensures that any bytes left over from a previous message are discarded
+    
+    print("Waiting for Arduino to reset")
+    
+    msg = ""
+    while msg.find("Arduino is ready") == -1:
+        msg = recvLikeArduino()
+        if not (msg == 'XXX'):
+            print(msg)
+
+def recvLikeArduino():
+    if(ser.inWaiting()>0):
+        x=ser.read.decode("utf-8")
+
+        if(x)'''
 
 
-rxbuffer =b''
+
+
+
 ser.flushInput()
 ser.flushOutput()
 time.sleep(2)
-tik = time.time()
+
 rec = []
-while(time.time() - tik < 1):
-    rxbuffer = ser.read(2)
+#while(time.time() - tik < 1):
+'''rxbuffer = ser.read(2)
     if(int.from_bytes(rxbuffer, 'big', signed=True) > 1023):
         print("out of sync")
         ser.flushInput()
@@ -37,18 +57,38 @@ while(time.time() - tik < 1):
         tik = time.time()
         continue    
     #conv = int.from_bytes(rxbuffer, 'big', signed=True)
-    rec.append(int.from_bytes(rxbuffer, 'big', signed=True))
+    rec.append((int.from_bytes(rxbuffer, 'big', signed=True) - 512)/1023 * 4.97)'''
+
     
+tik = time.time()
+while(time.time() - tik < 1):
+    try:
+        bytes = ser.read().decode()
+        if(bytes == ">"):
+            collect = False
+            rec.append((int(rxbuffer)-512)/1023*4.97)
+            rxbuffer = ''
+        if(collect):
+            rxbuffer += bytes
+        if(bytes == "<"):
+            collect = True
+
+        
+    except Exception as e:
+        print(e)
+        print(bytes)
+            
 print(len(rec))
 ser.close()
+rec = rec[4:]
 
 x = np.linspace(0,1,len(rec))
 plt.plot(x, rec)
-plt.show()'''
+plt.show()
 
 
 
-class serialInterfaceArduino:
+'''class serialInterfaceArduino:
 
 
     def __init__(self, com_address, baud, timeout_inter_byte = 0.1, timeout = 0.1):
@@ -58,7 +98,7 @@ class serialInterfaceArduino:
         bytesize=serial.EIGHTBITS,
         timeout=timeout,
         inter_byte_timeout=timeout_inter_byte)
-        '''rtscts=True)'''
+        rtscts=True)
 
         print("initializing objects")
         self.recieved_bytes = []
@@ -120,13 +160,13 @@ class serialInterfaceArduino:
 
     def readArduino(self):
         pass
+'''
 
-
-if __name__=="__main__":
+'''if __name__=="__main__":
     ser = serialInterfaceArduino("COM15", 9600)
     ser.sendCommand("start")
     #ser.writeArduino()
     #ser.readArduino()
-
+'''
 
 
