@@ -10,7 +10,8 @@ HANDLE handler;
 TCHAR *pcCommPort = TEXT("\\\\.\\COM14");
 DWORD errors;
 COMSTAT comStatus;
-char read_data[255];
+char read_data[1];
+char hold_data[1];
 
 
 void SerialPort(char *portName)
@@ -84,17 +85,42 @@ int ReadSerialPort(char *buffer, unsigned int buf_size){
 int main(){
     SerialPort("\\.\\\\COM14");
     if(connected){
-        ReadSerialPort(read_data, sizeof(read_data));
-
-        cout<<">> "<<read_data<<endl;
-
-        //to see how data is returned
-        for(int el = 0; el<sizeof(read_data); el++){
-            // if(read_data[el] == '\r'){
-            //     printf("ping!\n");
-            // }
-            printf("Element %d of read buffer: %d\n", el, read_data[el]);
+        bool startByte = false;
+        bool stopByte  = false;
+        ReadSerialPort(hold_data, sizeof(hold_data));
+        printf("Waiting for start bit\n");
+        while(hold_data[0] != '<'){
+            ReadSerialPort(hold_data, sizeof(hold_data));
+            if(hold_data[0] == '<'){
+                printf("Start bit\n");
+                break;
+            }
         }
+        while(true){
+            //wait for return statement
+            ReadSerialPort(read_data, sizeof(read_data));
+            if(read_data[0] == '<'){
+                printf("Start command\n");
+                startByte = true;
+                ReadSerialPort(hold_data, sizeof(hold_data));
+            }
+
+
+
+
+            cout<<">> "<<read_data<<endl;
+
+            //to see how data is returned
+            for(int el = 0; el<sizeof(read_data); el++){
+                if(read_data[el] == '\r' && read_data[el-1] == '<'){
+                    printf("begin!\n");
+                }
+                if(read_data[el] == '\n' && read_data[el-1] =='\r' && read_data[el-2]=='>' ){
+                    printf("end!\n");
+                }
+                printf("Element %d of read buffer: %d\n", el, read_data[el]);
+            }
+            }
     }
 }
 
