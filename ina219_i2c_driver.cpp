@@ -68,10 +68,32 @@ void setup() {
   
   Serial.println("Status of Connect");
   Serial.println(IS_CONNECT);
+
+  setMode();
+  delay(1000);
     
 }
 
-uint16_t readBus(){
+byte setMode(){
+  /*
+   * right now just configure for cont bus convserion and 9 bit mode
+   */
+   Wire.beginTransmission(i2c_address);
+   Wire.write(0x00);
+   Wire.write(0x00);
+   Wire.write(0x06);
+
+   if(Wire.endTransmission() == 0){
+      Wire.requestFrom(i2c_address,2);
+      byte a = Wire.read();
+      byte b = Wire.read();
+      if(((a<<8|b) - 0x0006) == 0){
+        Serial.println("Mode set");
+      }
+   }   
+}
+
+byte readBus(){
   byte a;
   byte b;
   //write the bus address
@@ -81,7 +103,7 @@ uint16_t readBus(){
     Wire.requestFrom(i2c_address, 2);
     a = Wire.read();
     b = Wire.read();
-  }
+    }
   b=b>>3;
   uint16_t res = (a<<5|b);  
   Serial.println(res);
@@ -92,6 +114,6 @@ void loop() {
   // put your main code here, to run repeatedly
   while(IS_CONNECT){
     readBus();
-  }  
-}
+    }  
+  }
   
