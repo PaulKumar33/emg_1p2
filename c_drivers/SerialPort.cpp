@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <iostream>
+#include <time.h>
 using namespace std;
 
 bool connected = false;
@@ -43,7 +44,7 @@ void SerialPort(char *portName)
             printf("failed to get current serial parameters");
         }
         else {
-            dcbSerialParameters.BaudRate = CBR_9600;
+            dcbSerialParameters.BaudRate = CBR_115200;
             dcbSerialParameters.ByteSize = 8;
             dcbSerialParameters.StopBits = ONESTOPBIT;
             dcbSerialParameters.Parity = NOPARITY;
@@ -82,11 +83,16 @@ int ReadSerialPort(char *buffer, unsigned int buf_size){
     return 0;
 }
 
+char* PollSerialPort(){
+    //this method polls the serial port
+}
+
 int main(){
     SerialPort("\\.\\\\COM14");
     if(connected){
         bool startByte = false;
         bool stopByte  = false;
+        bool startCollection = false;
         ReadSerialPort(hold_data, sizeof(hold_data));
         printf("Waiting for start bit\n");
         while(hold_data[0] != '<'){
@@ -96,31 +102,50 @@ int main(){
                 break;
             }
         }
+        int _speed = 0;
+        int counter = 0;
+        clock_t t;
+        t = clock();
         while(true){
             //wait for return statement
+            
             ReadSerialPort(read_data, sizeof(read_data));
+            
             if(read_data[0] == '<'){
-                printf("Start command\n");
+                //printf("Start command\n");
                 startByte = true;
-                ReadSerialPort(hold_data, sizeof(hold_data));
+                stopByte = false;
+                startCollection = false;
+                continue;
             }
-
-
-
-
-            cout<<">> "<<read_data<<endl;
-
-            //to see how data is returned
-            for(int el = 0; el<sizeof(read_data); el++){
-                if(read_data[el] == '\r' && read_data[el-1] == '<'){
-                    printf("begin!\n");
-                }
-                if(read_data[el] == '\n' && read_data[el-1] =='\r' && read_data[el-2]=='>' ){
-                    printf("end!\n");
-                }
-                printf("Element %d of read buffer: %d\n", el, read_data[el]);
+            if(read_data[0] == '>'){
+                stopByte = true;
+                startByte = false;
+                startCollection = false;
+                printf("\n");
+                continue;
             }
+            if(read_data[0] != '<' || read_data[0] != '>'){
+                startCollection= true;
             }
+            if(startCollection){
+                //printf("%c", read_data[0]);
+                _speed++;
+                //printf("%d\n", _speed);
+            }
+            while(counter < 4000){
+                counter ++;
+            }
+            counter =0;
+            //Sleep(1);
+            //if all else passes print the read value
+            if(_speed == 30000){
+                t = clock() - t;
+                break;
+
+            }                     
+        }
+        cout << "time: " << t << "ms" << endl;          
     }
 }
 
